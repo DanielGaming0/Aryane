@@ -1,0 +1,1196 @@
+html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Roma Antiga: Senado, Cônsules e Imperadores</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        :root {
+            --primary: #d4af37; /* Ouro Romano */
+            --primary-glow: rgba(212, 175, 55, 0.4);
+            --accent: #e5c158; 
+            --imperial-red: #800020; /* Borgonha/Púrpura Imperial */
+            --bg: #090506; /* Negro Obsidian profundo */
+            --bg-card: rgba(18, 11, 13, 0.82);
+            --border: rgba(212, 175, 55, 0.18);
+            --border-hover: rgba(212, 175, 55, 0.6);
+            --text: #f5f0eb;
+            --text-muted: #bdafa4;
+            --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            perspective: 2000px;
+        }
+
+        /* Canvas de Partículas de Ouro */
+        #goldCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        /* Vinheta Imperial para profundidade */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 30%, rgba(5, 2, 3, 0.95) 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Cursor Customizado Realçado */
+        #cursor {
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: width 0.25s var(--ease-smooth), height 0.25s var(--ease-smooth), background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 0 15px var(--primary-glow), 0 0 30px var(--primary-glow);
+        }
+        #cursor-follower {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--primary);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.08s ease-out, width 0.25s var(--ease-smooth), height 0.25s var(--ease-smooth), border-color 0.2s;
+            opacity: 0.6;
+        }
+        #cursor.active {
+            width: 20px;
+            height: 20px;
+            background: var(--text);
+            box-shadow: 0 0 25px #ffffff;
+        }
+        #cursor-follower.active {
+            width: 56px;
+            height: 56px;
+            border-color: #ffffff;
+            border-width: 1.5px;
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        /* Estrutura Principal */
+        .stage {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .slider-container {
+            width: 100%;
+            max-width: 1450px;
+            height: 750px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            align-items: center;
+            gap: 4rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateZ(-500px) rotateX(10deg) scale(0.9);
+            transition: opacity 0.9s var(--ease-smooth), visibility 0.9s, transform 1s var(--ease-smooth), filter 0.9s;
+            filter: blur(15px);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateZ(0) rotateX(0deg) scale(1);
+            filter: blur(0);
+        }
+
+        /* Lado Esquerdo - Informações */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 24px;
+            background: linear-gradient(90deg, rgba(128, 0, 32, 0.35) 0%, rgba(212, 175, 55, 0.08) 100%);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--primary);
+            width: fit-content;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-family: 'Cinzel', serif;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #ffffff 10%, #f1e0b0 50%, #d4af37 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            letter-spacing: -0.01em;
+        }
+
+        /* Card Flutuante Mármore/Glássico */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 
+                0 30px 60px -20px rgba(0, 0, 0, 0.8),
+                0 0 50px rgba(212, 175, 55, 0.02) inset;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: border-color 0.4s var(--ease-smooth), box-shadow 0.4s var(--ease-smooth);
+        }
+
+        .glass-card::before {
+            content: 'SPQR';
+            position: absolute;
+            bottom: 15px;
+            right: 25px;
+            font-family: 'Cinzel', serif;
+            font-size: 3rem;
+            font-weight: 900;
+            opacity: 0.025;
+            color: var(--primary);
+            pointer-events: none;
+            letter-spacing: 10px;
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 
+                0 40px 80px -20px rgba(0, 0, 0, 0.9),
+                0 0 30px rgba(212, 175, 55, 0.08) inset,
+                0 0 15px rgba(212, 175, 55, 0.1);
+        }
+
+        .card-content {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .card-content::-webkit-scrollbar { width: 5px; }
+        .card-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        .card-content::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        .feature-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.2rem;
+            transition: transform 0.3s var(--ease-smooth), color 0.3s;
+        }
+        .feature-list li:hover {
+            transform: translateX(10px);
+            color: #ffffff;
+        }
+        .feature-list i {
+            margin-top: 4px;
+            color: var(--primary);
+            font-size: 1.15rem;
+            filter: drop-shadow(0 0 8px var(--primary-glow));
+        }
+
+        /* Lado Direito - Imagens com Moldura Monumental */
+        .visual-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            perspective: 1000px;
+        }
+
+        .monumental-frame {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 580px;
+            border-radius: 20px;
+            padding: 12px;
+            background: linear-gradient(145deg, #1c1316 0%, #0d0709 100%);
+            box-shadow: 
+                0 25px 60px -15px rgba(0, 0, 0, 0.9),
+                0 0 0 1px rgba(212, 175, 55, 0.15);
+            transform-style: preserve-3d;
+            transition: transform 0.6s var(--ease-smooth);
+        }
+        .monumental-frame::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(to bottom, var(--primary), transparent 40%, var(--primary));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .monumental-frame:hover {
+            transform: rotateY(-10deg) rotateX(5deg) scale(1.03);
+        }
+
+        .slide-image-wrapper {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+        }
+
+        .slide-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 1.5s var(--ease-smooth);
+            filter: grayscale(20%) sepia(20%) contrast(110%);
+        }
+        .monumental-frame:hover .slide-image {
+            transform: scale(1.08);
+        }
+
+        /* Overlay Decorativo de Templo */
+        .temple-cap {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%) translateZ(30px);
+            width: 120px;
+            height: 12px;
+            background: var(--primary);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            box-shadow: 0 4px 15px var(--primary-glow);
+            opacity: 0.85;
+        }
+
+        /* Questionário Interativo (Último Slide) */
+        .quiz-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            margin-top: 1rem;
+        }
+        .quiz-option {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 10px;
+            padding: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            text-align: left;
+            font-size: 1rem;
+            color: var(--text-muted);
+            transition: all 0.3s var(--ease-smooth);
+        }
+        .quiz-option:hover {
+            background: rgba(212, 175, 55, 0.08);
+            border-color: var(--primary);
+            color: #ffffff;
+            transform: translateX(10px);
+        }
+        .quiz-option.correct {
+            background: rgba(46, 117, 89, 0.2) !important;
+            border-color: #2e7559 !important;
+            color: #4ade80 !important;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
+        }
+        .quiz-option.wrong {
+            background: rgba(128, 0, 32, 0.25) !important;
+            border-color: var(--imperial-red) !important;
+            color: #f87171 !important;
+            box-shadow: 0 0 20px rgba(248, 113, 113, 0.15);
+        }
+        .quiz-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .quiz-option:hover .quiz-indicator {
+            border-color: var(--primary);
+            background: rgba(212, 175, 55, 0.15);
+        }
+
+        .feedback-message {
+            margin-top: 1.5rem;
+            min-height: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.4s var(--ease-smooth);
+        }
+        .feedback-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Navegação e UI */
+        .nav-ui {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            padding: 10px 40px;
+            background: rgba(14, 8, 10, 0.85);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            z-index: 1000;
+            box-shadow: 
+                0 20px 50px rgba(0,0,0,0.8),
+                0 0 0 1px rgba(212, 175, 55, 0.05);
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 1.5rem;
+            transition: all 0.4s var(--ease-bounce);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            position: relative;
+        }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.06);
+            transform: scale(0);
+            transition: transform 0.4s var(--ease-bounce);
+        }
+        .nav-btn:hover { 
+            color: #fff;
+            text-shadow: 0 0 15px var(--primary);
+        }
+        .nav-btn:hover::before {
+            transform: scale(1);
+        }
+        .nav-btn:active {
+            transform: scale(0.9);
+        }
+
+        .slide-counter {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--primary);
+            letter-spacing: 6px;
+            text-shadow: 0 0 10px var(--primary-glow);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .slide-counter span {
+            font-size: 0.9rem;
+            opacity: 0.5;
+        }
+
+        /* Barra de Progresso Superior Monumental */
+        .progress-line-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.03);
+            z-index: 2000;
+        }
+
+        .progress-line {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--imperial-red) 0%, var(--primary) 50%, #ffffff 100%);
+            box-shadow: 0 0 15px var(--primary);
+            transition: width 0.6s var(--ease-smooth);
+        }
+
+        /* Rodapé de Controle de Áudio */
+        .audio-ctrl {
+            position: fixed;
+            top: 25px;
+            right: 40px;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(14, 8, 10, 0.6);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            backdrop-filter: blur(10px);
+        }
+        .audio-toggle {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 1rem;
+            pointer-events: auto;
+        }
+
+        /* Ícone S.P.Q.R Decorativo Lateral */
+        .decor-spqr {
+            position: fixed;
+            top: 25px;
+            left: 40px;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: var(--primary);
+            font-size: 1.1rem;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.8;
+        }
+        .decor-spqr::after {
+            content: '';
+            width: 40px;
+            height: 1px;
+            background: var(--primary);
+            display: inline-block;
+        }
+
+        /* Animações de Entrada Ativa */
+        .slide.active .info-panel .badge { animation: slideUpFade 0.7s var(--ease-smooth) forwards; }
+        .slide.active h1 { animation: slideUpFade 0.7s var(--ease-smooth) 0.1s forwards; }
+        .slide.active .glass-card { animation: slideUpFade 0.7s var(--ease-smooth) 0.2s forwards; }
+        .slide.active .visual-panel { animation: slideLeftFade 0.7s var(--ease-smooth) 0.15s forwards; }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(40px) translateZ(-50px); }
+            to { opacity: 1; transform: translateY(0) translateZ(0); }
+        }
+        @keyframes slideLeftFade {
+            from { opacity: 0; transform: translateX(60px) rotateY(15deg); }
+            to { opacity: 1; transform: translateX(0) rotateY(0); }
+        }
+
+        /* Responsividade Extrema */
+        @media (max-width: 1100px) {
+            .slide {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                overflow-y: auto;
+                height: 100%;
+                padding-bottom: 80px;
+            }
+            .visual-panel {
+                order: -1;
+                height: 300px;
+            }
+            .monumental-frame {
+                height: 100%;
+                max-width: 100%;
+                aspect-ratio: 16/9;
+            }
+            h1 {
+                font-size: 2.2rem;
+                margin-bottom: 1rem;
+            }
+            .badge {
+                margin-bottom: 1rem;
+            }
+            .glass-card {
+                padding: 1.5rem;
+            }
+            .slider-container {
+                height: 90vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-line-container">
+        <div class="progress-line" id="bar"></div>
+    </div>
+    <canvas id="goldCanvas"></canvas>
+    <div class="vignette"></div>
+
+    <!-- Elementos de Decoração Superior -->
+    <div class="decor-spqr">S.P.Q.R</div>
+    <div class="audio-ctrl">
+        <span>Transições Sonoras</span>
+        <button class="audio-toggle" id="audioBtn" title="Ativar/Mudar Som"><i class="fa-solid fa-volume-high"></i></button>
+    </div>
+
+    <!-- Cursores Virtuais Avançados -->
+    <div id="cursor"></div>
+    <div id="cursor-follower"></div>
+
+    <!-- Palco Principal de Apresentação -->
+    <div class="stage">
+        <div class="slider-container" id="slider"></div>
+    </div>
+
+    <!-- Console de Navegação -->
+    <nav class="nav-ui">
+        <button class="nav-btn" id="prevBtn" title="Anterior (Seta Esquerda)"><i class="fa-solid fa-angles-left"></i></button>
+        <div class="slide-counter" id="counter">1 <span>/ 10</span></div>
+        <button class="nav-btn" id="nextBtn" title="Próximo (Seta Direita)"><i class="fa-solid fa-angles-right"></i></button>
+    </nav>
+
+    <script>
+        (function(){
+            "use strict";
+
+            // ========== GERADOR DE EFEITOS SONOROS (WEB AUDIO API) ==========
+            let soundEnabled = true;
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            function playSound(type) {
+                if (!soundEnabled) return;
+                
+                // Retomar contexto de áudio se suspenso (política de navegadores)
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    if (type === 'swipe') {
+                        // Varredura de frequência majestosa para transição de slides
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(320, audioCtx.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.55);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.6);
+                    } else if (type === 'click') {
+                        // Clique suave metálico ao interagir
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.2);
+                    } else if (type === 'correct') {
+                        // Sucesso (Acorde de trombeta romana sutil)
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(330, audioCtx.currentTime); // Mi
+                        osc.frequency.setValueAtTime(392, audioCtx.currentTime + 0.1); // Sol
+                        osc.frequency.setValueAtTime(523, audioCtx.currentTime + 0.2); // Dó
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.6);
+                    } else if (type === 'wrong') {
+                        // Erro (Frequência baixa descendente)
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                        osc.frequency.linearRampToValueAtTime(90, audioCtx.currentTime + 0.3);
+                        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.5);
+                    }
+                } catch (e) {
+                    console.log("Erro ao inicializar áudio sintetizado:", e);
+                }
+            }
+
+            // Controle de ativação de som
+            const audioBtn = document.getElementById('audioBtn');
+            audioBtn.addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                if (soundEnabled) {
+                    audioBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                    audioBtn.style.color = 'var(--primary)';
+                    playSound('click');
+                } else {
+                    audioBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                    audioBtn.style.color = 'var(--text-muted)';
+                }
+            });
+
+
+            // ========== FUNDO DE PARTÍCULAS EM OURO FLUTUANTE ==========
+            const canvas = document.getElementById('goldCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            const particles = [];
+            const numParticles = 65;
+
+            function resizeCanvas() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            class GoldParticle {
+                constructor() {
+                    this.reset();
+                    this.y = Math.random() * height;
+                }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = height + 10;
+                    this.vx = (Math.random() - 0.5) * 0.35;
+                    this.vy = -(0.2 + Math.random() * 0.5);
+                    this.radius = 0.8 + Math.random() * 1.8;
+                    this.alpha = 0.1 + Math.random() * 0.5;
+                    this.wobble = Math.random() * Math.PI;
+                    this.wobbleSpeed = 0.01 + Math.random() * 0.02;
+                }
+                update() {
+                    this.y += this.vy;
+                    this.x += this.vx + Math.sin(this.wobble) * 0.15;
+                    this.wobble += this.wobbleSpeed;
+                    
+                    if (this.y < -10 || this.x < -10 || this.x > width + 10) {
+                        this.reset();
+                    }
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
+                    ctx.shadowBlur = this.radius * 3;
+                    ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+                    ctx.fill();
+                    ctx.shadowBlur = 0; // reset
+                }
+            }
+
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new GoldParticle());
+            }
+
+            function drawScene() {
+                ctx.clearRect(0, 0, width, height);
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                }
+                requestAnimationFrame(drawScene);
+            }
+            drawScene();
+
+
+            // ========== FALLBACK DE IMAGENS EM SVG TEMÁTICOS ==========
+            const svgFallbacks = {
+                1: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#1c0f12"/>
+                        <path d="M50 400 H350 V430 H50 Z" fill="#d4af37" opacity="0.8"/>
+                        <path d="M70 120 L200 40 L330 120 Z" fill="#d4af37" opacity="0.9"/>
+                        <rect x="90" y="120" width="30" height="280" fill="#e5c158" opacity="0.75"/>
+                        <rect x="150" y="120" width="30" height="280" fill="#e5c158" opacity="0.75"/>
+                        <rect x="210" y="120" width="30" height="280" fill="#e5c158" opacity="0.75"/>
+                        <rect x="270" y="120" width="30" height="280" fill="#e5c158" opacity="0.75"/>
+                        <circle cx="200" cy="240" r="45" stroke="#d4af37" stroke-width="3" fill="none"/>
+                        <text x="200" y="246" font-family="'Cinzel', serif" font-size="16" fill="#d4af37" font-weight="bold" text-anchor="middle">SPQR</text>
+                    </svg>`,
+                2: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#0d0709"/>
+                        <circle cx="200" cy="220" r="110" stroke="#d4af37" stroke-width="2" stroke-dasharray="10 5" fill="none"/>
+                        <path d="M120 220 C 120 120, 280 120, 280 220" stroke="#800020" stroke-width="8" fill="none"/>
+                        <circle cx="200" cy="220" r="70" fill="rgba(212,175,55,0.05)" stroke="#d4af37" stroke-width="1"/>
+                        <text x="200" y="225" font-family="'Cinzel', serif" font-size="28" fill="#e5c158" font-weight="900" text-anchor="middle">SENATUS</text>
+                        <text x="200" y="380" font-family="'Cinzel', serif" font-size="14" fill="#bdafa4" font-weight="bold" text-anchor="middle" letter-spacing="4">PATRES CONSCRIPTI</text>
+                    </svg>`,
+                3: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#150a0d"/>
+                        <g transform="translate(110, 150)">
+                            <path d="M30 0 L0 100 H60 Z" fill="#800020" stroke="#d4af37" stroke-width="2"/>
+                            <circle cx="30" cy="-20" r="18" fill="#d4af37"/>
+                            <rect x="15" y="100" width="10" height="80" fill="#bdafa4"/>
+                            <rect x="35" y="100" width="10" height="80" fill="#bdafa4"/>
+                        </g>
+                        <g transform="translate(230, 150)">
+                            <path d="M30 0 L0 100 H60 Z" fill="#800020" stroke="#d4af37" stroke-width="2"/>
+                            <circle cx="30" cy="-20" r="18" fill="#d4af37"/>
+                            <rect x="15" y="100" width="10" height="80" fill="#bdafa4"/>
+                            <rect x="35" y="100" width="10" height="80" fill="#bdafa4"/>
+                        </g>
+                        <line x1="80" y1="380" x2="320" y2="380" stroke="#d4af37" stroke-width="4"/>
+                        <text x="200" y="420" font-family="'Cinzel', serif" font-size="20" fill="#d4af37" font-weight="bold" text-anchor="middle" letter-spacing="3">DUO CONSULES</text>
+                    </svg>`,
+                4: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#0d0709"/>
+                        <g transform="translate(200, 200) scale(1.4)">
+                            <circle cx="0" cy="0" r="50" stroke="#d4af37" stroke-width="2" stroke-dasharray="160 20" fill="none" transform="rotate(-100)"/>
+                            <path d="M-45 -10 Q-35 -20 -40 -30 Q-50 -20 -45 -10" fill="#d4af37"/>
+                            <path d="M-48 10 Q-38 20 -43 30 Q-53 20 -48 10" fill="#d4af37"/>
+                            <path d="M45 -10 Q35 -20 40 -30 Q50 -20 45 -10" fill="#d4af37"/>
+                            <path d="M48 10 Q38 20 43 30 Q53 20 48 10" fill="#d4af37"/>
+                            <text x="0" y="8" font-family="'Cinzel', serif" font-size="24" fill="#ffffff" font-weight="900" text-anchor="middle">CAESAR</text>
+                        </g>
+                        <text x="200" y="380" font-family="'Cinzel', serif" font-size="15" fill="#d4af37" font-weight="bold" text-anchor="middle" letter-spacing="6">IMPERATOR IMPERIUM</text>
+                    </svg>`,
+                5: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#1b1013"/>
+                        <circle cx="200" cy="200" r="100" fill="none" stroke="#d4af37" stroke-width="2"/>
+                        <path d="M120 180 L180 240 L280 140" stroke="#4ade80" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <text x="200" y="360" font-family="'Cinzel', serif" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle" letter-spacing="2">COMITIA TRIBUTA</text>
+                        <text x="200" y="395" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" fill="#bdafa4" text-anchor="middle">O Voto das Tribos e as Decisões</text>
+                    </svg>`,
+                6: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#0d0709"/>
+                        <g transform="translate(140, 60)">
+                            <rect x="55" y="0" width="10" height="380" fill="#bdafa4"/>
+                            <rect x="10" y="40" width="100" height="15" fill="#d4af37"/>
+                            <rect x="20" y="55" width="80" height="120" fill="#800020" stroke="#d4af37" stroke-width="3"/>
+                            <text x="60" y="115" font-family="'Cinzel', serif" font-size="16" fill="#d4af37" font-weight="bold" text-anchor="middle" letter-spacing="2">SPQR</text>
+                            <circle cx="60" cy="25" r="18" fill="#d4af37"/>
+                        </g>
+                    </svg>`,
+                8: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#140d0f"/>
+                        <path d="M110 320 Q200 240 290 320" stroke="#d4af37" stroke-width="4" fill="none"/>
+                        <circle cx="150" cy="200" r="22" fill="#800020" stroke="#d4af37" stroke-width="2"/>
+                        <circle cx="250" cy="200" r="22" fill="#800020" stroke="#d4af37" stroke-width="2"/>
+                        <path d="M130 240 H270 V260 H130 Z" fill="#d4af37"/>
+                        <text x="200" y="130" font-family="'Cinzel', serif" font-size="20" fill="#d4af37" font-weight="bold" text-anchor="middle" letter-spacing="3">TRIBUNI</text>
+                        <text x="200" y="380" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" fill="#bdafa4" text-anchor="middle">A Defesa Sagrada dos Plebeus</text>
+                    </svg>`,
+                9: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#1a1114"/>
+                        <rect x="80" y="100" width="100" height="260" fill="#120b0d" stroke="#d4af37" stroke-width="2" rx="8"/>
+                        <rect x="220" y="100" width="100" height="260" fill="#120b0d" stroke="#d4af37" stroke-width="2" rx="8"/>
+                        <line x1="100" y1="140" x2="160" y2="140" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="100" y1="180" x2="160" y2="180" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="100" y1="220" x2="160" y2="220" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="100" y1="260" x2="160" y2="260" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="240" y1="140" x2="300" y2="140" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="240" y1="180" x2="300" y2="180" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="240" y1="220" x2="300" y2="220" stroke="#bdafa4" stroke-width="2"/>
+                        <line x1="240" y1="260" x2="300" y2="260" stroke="#bdafa4" stroke-width="2"/>
+                        <text x="200" y="420" font-family="'Cinzel', serif" font-size="16" fill="#e5c158" font-weight="bold" text-anchor="middle" letter-spacing="2">LEX XII TABULARUM</text>
+                    </svg>`,
+                10: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#0d0709"/>
+                        <circle cx="200" cy="200" r="100" fill="none" stroke="rgba(212,175,55,0.2)" stroke-width="1"/>
+                        <circle cx="200" cy="200" r="90" fill="none" stroke="#d4af37" stroke-width="2"/>
+                        <path d="M150 160 C 170 120, 230 120, 250 160 C 270 200, 270 240, 250 280 C 230 320, 170 320, 150 280 Z" fill="none" stroke="#d4af37" stroke-width="1.5"/>
+                        <path d="M130 200 H270" stroke="#d4af37" stroke-width="1.5"/>
+                        <text x="200" y="370" font-family="'Cinzel', serif" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle" letter-spacing="2">ROMA AD INFINITUM</text>
+                        <text x="200" y="405" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" fill="#bdafa4" text-anchor="middle">A Herança Democrática Viva</text>
+                    </svg>`,
+                7: `<svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="500" fill="#1e1215"/>
+                        <circle cx="200" cy="200" r="80" fill="none" stroke="#d4af37" stroke-width="2" stroke-dasharray="10 10"/>
+                        <text x="200" y="220" font-family="'Cinzel', serif" font-size="64" fill="#d4af37" font-weight="900" text-anchor="middle">?</text>
+                        <text x="200" y="360" font-family="'Cinzel', serif" font-size="22" fill="#ffffff" font-weight="bold" text-anchor="middle">SENATUS POPULUSQUE</text>
+                    </svg>`
+            };
+
+            function handleImageError(imgElement, index) {
+                const parent = imgElement.parentElement;
+                if (parent) {
+                    parent.innerHTML = svgFallbacks[index] || svgFallbacks[1];
+                }
+            }
+
+
+            // ========== DICIONÁRIO DE DADOS ATUALIZADO (10 SLIDES) ==========
+            const slidesData = [
+                {   // Slide 1 – Introdução
+                    title: "A Política Romana",
+                    icon: "fa-monument",
+                    color: "#d4af37",
+                    badge: "Evolução do Poder",
+                    content: `<p style="font-size:1.15rem; margin-bottom:1.5rem; color:#fff;">A política da <strong>Roma Antiga</strong> moldou as estruturas democráticas, jurídicas e administrativas de todo o mundo ocidental.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-landmark"></i> <span><strong>Transição Histórica:</strong> De Monarquia a República e, finalmente, ao poder centralizado do Império.</span></li>
+                        <li><i class="fa-solid fa-gavel"></i> <span><strong>Engrenagem Jurídica:</strong> Criação de leis, cargos eletivos e salvaguardas contra a tirania.</span></li>
+                        <li><i class="fa-solid fa-shield-halved"></i> <span><strong>SPQR:</strong> <i>Senatus Populusque Romanus</i> (O Senado e o Povo de Roma).</span></li>
+                    </ul>`,
+                    meta: "Origens · Equilíbrio de Poder"
+                },
+                {   // Slide 2 – O Senado Romano
+                    title: "O Senado Romano",
+                    icon: "fa-building-columns",
+                    color: "#e5c158",
+                    badge: "Senatus",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">O corpo político mais influente da República. Formado principalmente por patrícios (membros das famílias aristocráticas).</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-coins"></i> <span><strong>Controle Financeiro:</strong> Responsável direto por recolher impostos e ditar os gastos públicos de Roma.</span></li>
+                        <li><i class="fa-solid fa-compass"></i> <span><strong>Diplomacia:</strong> Gerenciava a política externa, declarava guerras e aprovava tratados internacionais.</span></li>
+                        <li><i class="fa-solid fa-crown"></i> <span><strong>Poder de Consulta:</strong> Suas diretrizes (*Senatus Consulta*) serviam como leis práticas.</span></li>
+                    </ul>`,
+                    meta: "O Coração Republicano"
+                },
+                {   // Slide 3 – Os Cônsules
+                    title: "Os Cônsules",
+                    icon: "fa-user-tie",
+                    color: "#f1e0b0",
+                    badge: "Imperium Magistrado",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">Os dois magistrados supremos eleitos anualmente, que detinham o poder executivo e militar máximo de Roma.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-hourglass-half"></i> <span><strong>Mandatos de 1 Ano:</strong> Limite rigoroso de tempo para assegurar que nenhum cônsul se transformasse em rei.</span></li>
+                        <li><i class="fa-solid fa-ban"></i> <span><strong>Direito de Veto:</strong> Um cônsul podia anular a decisão do outro instantaneamente (*Intercessio*).</span></li>
+                        <li><i class="fa-solid fa-chess-knight"></i> <span><strong>Generais de Guerra:</strong> Lideravam as temidas legiões romanas nos campos de batalha.</span></li>
+                    </ul>`,
+                    meta: "Magistratura Suprema"
+                },
+                {   // Slide 4 – O Papel dos Imperadores
+                    title: "O Papel dos Imperadores",
+                    icon: "fa-crown",
+                    color: "#800020",
+                    badge: "Principado e Dominato",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">Com a ascensão de Augusto, o sistema republicano desmoronou, centralizando todo o comando em um único homem.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-bolt"></i> <span><strong>Concentração Máxima:</strong> Acúmulo de cargos vitalícios: Imperador, Tribuno do Povo e Pontífice Máximo.</span></li>
+                        <li><i class="fa-solid fa-crosshairs"></i> <span><strong>Veto Absoluto:</strong> Controlavam todas as nomeações e possuíam o controle militar final sobre as legiões.</span></li>
+                        <li><i class="fa-solid fa-universal-access"></i> <span><strong>Culto ao Líder:</strong> Muitos imperadores eram deificados em vida ou pós-morte nas províncias.</span></li>
+                    </ul>`,
+                    meta: "Centralização e Autocracia"
+                },
+                {   // Slide 5 – Como eram tomadas as decisões
+                    title: "Tomada de Decisão",
+                    icon: "fa-scroll",
+                    color: "#d4af37",
+                    badge: "Decisões Políticas",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">A engrenagem do poder dependia do equilíbrio complexo entre a elite e as assembleias populares.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-users-line"></i> <span><strong>Comícios (Assembleias):</strong> Onde cidadãos comuns votavam leis e elegiam os magistrados republicanos.</span></li>
+                        <li><i class="fa-solid fa-bullhorn"></i> <span><strong>Plebiscitos:</strong> Decisões da Assembleia da Plebe que passaram a valer para toda a população de Roma.</span></li>
+                        <li><i class="fa-solid fa-signature"></i> <span><strong>Clientelismo:</strong> Aristocratas compravam ou influenciavam massivamente os votos de seus clientes.</span></li>
+                    </ul>`,
+                    meta: "Democracia Limitada"
+                },
+                {   // Slide 6 – Três Curiosidades
+                    title: "Três Curiosidades",
+                    icon: "fa-masks-theater",
+                    color: "#e5c158",
+                    badge: "Fatos Fascinantes",
+                    content: `<ul class="feature-list">
+                        <li><i class="fa-solid fa-horse"></i> <span><strong>Incitatus, o Senador:</strong> O polêmico imperador Calígula ridicularizou o Senado nomeando formalmente seu cavalo predileto como cônsul romano.</span></li>
+                        <li><i class="fa-solid fa-vest"></i> <span><strong>A Cor Púrpura Imperial:</strong> Apenas o imperador e generais vitoriosos podiam vestir túnicas tingidas de púrpura, extraída de caramujos caríssimos.</span></li>
+                        <li><i class="fa-solid fa-hands-bound"></i> <span><strong>Ditadura Legal:</strong> Em crises severas de guerra, a República nomeava um "Ditador" legítimo com plenos poderes por apenas 6 meses.</span></li>
+                    </ul>`,
+                    meta: "Segredos da Antiguidade"
+                },
+                {   // Slide 7 – Desafio Interativo (Quiz)
+                    title: "Desafio da Turma",
+                    icon: "fa-circle-question",
+                    color: "#ffffff",
+                    badge: "Perguntas de Roma",
+                    content: `<p style="font-size:1.15rem; margin-bottom:1.5rem; color:#fff;">Qual era o recurso político vital que garantia que um Cônsul não governasse como um tirano absoluto?</p>
+                    <div class="quiz-container">
+                        <button class="quiz-option" data-correct="false" data-id="A">
+                            <div class="quiz-indicator">A</div>
+                            <span>O apoio incondicional e as bênçãos dos Deuses no Templo de Júpiter.</span>
+                        </button>
+                        <button class="quiz-option" data-correct="true" data-id="B">
+                            <div class="quiz-indicator">B</div>
+                            <span>O poder recíproco de VETO (Intercessio) e o mandato fixado em 1 ano.</span>
+                        </button>
+                        <button class="quiz-option" data-correct="false" data-id="C">
+                            <div class="quiz-indicator">C</div>
+                            <span>A aprovação militar instantânea através da indicação direta do Imperador.</span>
+                        </button>
+                    </div>
+                    <div class="feedback-message" id="feedback"></div>`,
+                    meta: "Coloque seus conhecimentos à prova"
+                },
+                {   // Slide 8 – Novo: Tribunato da Plebe
+                    title: "Tribunato da Plebe",
+                    icon: "fa-people-group",
+                    color: "#d4af37",
+                    badge: "A Voz do Povo",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">Após revoltarem-se contra a opressão patrícia e organizarem greves militares, os plebeus conquistaram sua própria magistratura protetora.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-shield-cat"></i> <span><strong>Inviolabilidade (*Sacrosanctitas*):</strong> Qualquer um que ferisse ou assassinasse um Tribuno da Plebe era sentenciado à morte instantânea.</span></li>
+                        <li><i class="fa-solid fa-hand"></i> <span><strong>Poder de Veto:</strong> Podiam barrar decretos do Senado e ações de Cônsules se julgassem prejudiciais à classe plebeia.</span></li>
+                        <li><i class="fa-solid fa-door-open"></i> <span><strong>Portas Sempre Abertas:</strong> Por lei, as portas da casa de um Tribuno deviam ficar abertas dia e noite para acolher qualquer necessitado.</span></li>
+                    </ul>`,
+                    meta: "Resistência Popular · Igualdade"
+                },
+                {   // Slide 9 – Novo: A Lei das Doze Tábuas
+                    title: "As Doze Tábuas",
+                    icon: "fa-scale-balanced",
+                    color: "#e5c158",
+                    badge: "Lex Duodecim Tabularum",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">A pedra angular do Direito Romano. Pela primeira vez na história, as leis deixaram de ser orais (controladas apenas pelos patrícios) e foram gravadas em bronze.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-align-left"></i> <span><strong>Publicidade da Lei:</strong> Expostas no Fórum Romano para que qualquer cidadão pudesse ler e defender seus direitos básicos.</span></li>
+                        <li><i class="fa-solid fa-circle-nodes"></i> <span><strong>Igualdade Jurídica:</strong> Estabeleceu normas cruciais sobre dívidas, propriedade, família, herança e direito civil.</span></li>
+                        <li><i class="fa-solid fa-file-shield"></i> <span><strong>Fim do Arbítrio:</strong> Protegeu a plebe contra julgamentos tendenciosos feitos por magistrados patrícios.</span></li>
+                    </ul>`,
+                    meta: "Nascimento do Direito Moderno"
+                },
+                {   // Slide 10 – Novo: Legado Moderno
+                    title: "Legado no Presente",
+                    icon: "fa-earth-americas",
+                    color: "#f1e0b0",
+                    badge: "Roma Eterna",
+                    content: `<p style="font-size:1.1rem; margin-bottom:1.2rem; color:#fff;">O sistema republicano e a jurisprudência de Roma não desapareceram, mas sim moldaram as nações contemporâneas.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-landmark-dome"></i> <span><strong>Sistemas Bicamerais:</strong> O conceito atual de "Senado" e "Câmara dos Deputados" deriva direto do modelo romano.</span></li>
+                        <li><i class="fa-solid fa-scale-unbalanced-flip"></i> <span><strong>Tripartição de Poderes:</strong> Os freios e contrapesos republicanos inspiraram a divisão entre Executivo, Legislativo e Judiciário.</span></li>
+                        <li><i class="fa-solid fa-scroll"></i> <span><strong>Vocabulário Jurídico:</strong> Termos como *Veto*, *Cidadania*, *Plebiscito* e *Mandato* permanecem idênticos.</span></li>
+                    </ul>`,
+                    meta: "A Política Romana Viva Hoje"
+                }
+            ];
+
+
+            // ========== MONTAGEM DINÂMICA DOS SLIDES ==========
+            let currentIdx = 0;
+            const slider = document.getElementById('slider');
+            const bar = document.getElementById('bar');
+            const counter = document.getElementById('counter');
+            const cursor = document.getElementById('cursor');
+            const cursorFollower = document.getElementById('cursor-follower');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            slider.innerHTML = '';
+            slidesData.forEach((s, i) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = `slide ${i === 0 ? 'active' : ''}`;
+                
+                const slideIndex = i + 1;
+                slideDiv.innerHTML = `
+                    <div class="info-panel">
+                        <div class="badge"><i class="fa-solid fa-crown" style="font-size:0.8rem;"></i> ${s.badge}</div>
+                        <h1>${s.title}</h1>
+                        <div class="glass-card" style="border-top: 4px solid ${s.color};">
+                            <div class="card-content">${s.content}</div>
+                            <div style="margin-top:1.8rem; font-size:0.8rem; color:${s.color}; opacity:0.85; font-family:'Cinzel', serif; letter-spacing:2px;">
+                                <i class="fa-solid fa-compass"></i> ${s.meta}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="visual-panel">
+                        <div class="monumental-frame">
+                            <div class="temple-cap"></div>
+                            <div class="slide-image-wrapper">
+                                <img src="assets/imagem${slideIndex}.png" class="slide-image" alt="${s.title}" onerror="handleImageError(this, ${slideIndex})">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                slider.appendChild(slideDiv);
+            });
+
+            const slides = document.querySelectorAll('.slide');
+
+            function updateUI() {
+                // Atualizar a barra de progresso no topo
+                bar.style.width = `${((currentIdx + 1) / slidesData.length) * 100}%`;
+                // Mostrar a seção atual em número real (de 1 a 10) conforme solicitado
+                counter.innerHTML = `${currentIdx + 1} <span>/ 10</span>`;
+            }
+
+            function moveSlide(delta) {
+                playSound('swipe');
+                slides[currentIdx].classList.remove('active');
+                currentIdx = (currentIdx + delta + slidesData.length) % slidesData.length;
+                slides[currentIdx].classList.add('active');
+                updateUI();
+                
+                const btn = delta > 0 ? nextBtn : prevBtn;
+                btn.style.transform = 'scale(1.25)';
+                setTimeout(() => btn.style.transform = '', 180);
+            }
+
+            prevBtn.addEventListener('click', () => moveSlide(-1));
+            nextBtn.addEventListener('click', () => moveSlide(1));
+
+            // ========== CURSOR CUSTOMIZADO FLUIDO COM PARALLAX ==========
+            let mouseX = 0, mouseY = 0;
+            let currentX = 0, currentY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+
+                const rotX = (window.innerHeight / 2 - mouseY) / 75;
+                const rotY = (window.innerWidth / 2 - mouseX) / 75;
+                const container = document.querySelector('.slider-container');
+                if (container) {
+                    container.style.transform = `rotateX(${rotX}deg) rotateY(${-rotY}deg) translateZ(10px)`;
+                }
+            });
+
+            function animateCursor() {
+                const speed = 0.16;
+                currentX += (mouseX - currentX) * speed;
+                currentY += (mouseY - currentY) * speed;
+
+                cursor.style.left = mouseX + 'px';
+                cursor.style.top = mouseY + 'px';
+
+                cursorFollower.style.left = currentX + 'px';
+                cursorFollower.style.top = currentY + 'px';
+
+                requestAnimationFrame(animateCursor);
+            }
+            animateCursor();
+
+            // Interação 3D individual nos cards (mármores do senado)
+            document.querySelectorAll('.glass-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width - 0.5;
+                    const y = (e.clientY - rect.top) / rect.height - 0.5;
+                    card.style.transform = `perspective(1000px) rotateX(${y * 12}deg) rotateY(${x * 12}deg) translateY(-8px) translateZ(35px)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = '';
+                });
+            });
+
+            // Ativação do cursor para elementos clicáveis
+            document.querySelectorAll('button, .glass-card, .quiz-option').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursor.classList.add('active');
+                    cursorFollower.classList.add('active');
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursor.classList.remove('active');
+                    cursorFollower.classList.remove('active');
+                });
+            });
+
+            // Navegação por teclado
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') moveSlide(1);
+                if (e.key === 'ArrowLeft') moveSlide(-1);
+            });
+
+
+            // ========== INTERATIVIDADE DO QUIZ (SLIDE 7) ==========
+            const quizOptions = document.querySelectorAll('.quiz-option');
+            const feedback = document.getElementById('feedback');
+
+            quizOptions.forEach(opt => {
+                opt.addEventListener('click', function() {
+                    const isCorrect = this.getAttribute('data-correct') === 'true';
+                    
+                    quizOptions.forEach(o => {
+                        o.classList.remove('correct', 'wrong');
+                        o.style.pointerEvents = 'none'; // Travar após votar
+                    });
+
+                    if (isCorrect) {
+                        this.classList.add('correct');
+                        feedback.style.color = '#4ade80';
+                        feedback.innerHTML = '<i class="fa-solid fa-circle-check"></i> Resposta Correta! Ave, Cidadão! O mandato de 1 ano e o veto mútuo evitavam que os Cônsules agissem como reis tiranos.';
+                        playSound('correct');
+                    } else {
+                        this.classList.add('wrong');
+                        feedback.style.color = '#f87171';
+                        feedback.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Resposta Incorreta! Tente novamente na próxima apresentação.';
+                        playSound('wrong');
+
+                        setTimeout(() => {
+                            const correctBtn = document.querySelector('.quiz-option[data-correct="true"]');
+                            if (correctBtn) correctBtn.classList.add('correct');
+                        }, 500);
+                    }
+                    feedback.classList.add('show');
+                });
+            });
+
+            updateUI();
+        })();
+    </script>
+</body>
+</html>
